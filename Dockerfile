@@ -18,12 +18,25 @@ RUN apt update && \
     make -j`nproc` && make install && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Scala
-# Check jdk compatibility for scala at https://docs.scala-lang.org/overviews/jdk-compatibility/overview.html
-FROM openjdk:21-bookworm
-COPY --from=verilator /verilator/bin /usr/bin
+FROM alpine AS scala_cli
+RUN apk add --no-cache curl && \
+    curl -fL https://github.com/Virtuslab/scala-cli/releases/latest/download/scala-cli-x86_64-pc-linux.gz | gzip -d > /scala-cli && \
+    chmod +x /scala-cli
+
+
+# Place executables into runtime.
+# TODO: enable to use those executables from `scratch` image.
+# several shared library would be required.
+# root@807bf31d643e:/usr/bin# ldd scala-cli
+#         linux-vdso.so.1 (0x00007fffffb97000)
+#         libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007f388a6f6000)
+#         libdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x00007f388a6f1000)
+#         libz.so.1 => /lib/x86_64-linux-gnu/libz.so.1 (0x00007f388a6d2000)
+#         librt.so.1 => /lib/x86_64-linux-gnu/librt.so.1 (0x00007f388a6cd000)
+#         libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f3883e1f000)
+#         /lib64/ld-linux-x86-64.so.2 (0x00007f388a6ff000)
+# and ones linked to verilator.
+FROM debian:bookworm
+COPY --from=verilator --chmod=0x755 /verilator/bin /usr/bin
 COPY --from=verilator /verilator/share /usr/share
-RUN curl -OL https://github.com/sbt/sbt/releases/download/v1.9.9/sbt-1.9.9.tgz && \
-    tar xf sbt-1.9.9.tgz && \
-    mv sbt/bin/sbt sbt/bin/sbt-launch.jar sbt/bin/sbtn-x86_64-pc-linux /usr/bin && \
-    rm -rf sbt sbt-1.9.9.tgz
+COPY --from=scala_cli --chmod=0x755 /scala-cli /usr/bin
