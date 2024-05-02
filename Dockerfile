@@ -62,3 +62,6 @@ RUN apt update && apt install -y \
     zlib1g \
     zlib1g-dev && \
     rm -rf /var/lib/apt/lists/*
+# Install JDK to run mill
+RUN apt update && apt install -y openjdk-17-jdk && \
+    rm -rf /var/lib/apt/lists/*
