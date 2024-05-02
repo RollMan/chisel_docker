@@ -18,10 +18,13 @@ RUN apt update && \
     make -j`nproc` && make install && \
     rm -rf /var/lib/apt/lists/*
 
+# Install both scala-cli and mill
 FROM alpine AS scala_cli
 RUN apk add --no-cache curl && \
     curl -fL https://github.com/Virtuslab/scala-cli/releases/latest/download/scala-cli-x86_64-pc-linux.gz | gzip -d > /scala-cli && \
-    chmod +x /scala-cli
+    chmod +x /scala-cli && \
+    curl -L https://github.com/com-lihaoyi/mill/releases/download/0.11.7/0.11.7 > /mill && \
+    chmod +x /mill
 
 
 # Place executables into runtime.
@@ -40,3 +43,22 @@ FROM debian:bookworm
 COPY --from=verilator --chmod=0x755 /verilator/bin /usr/bin
 COPY --from=verilator /verilator/share /usr/share
 COPY --from=scala_cli --chmod=0x755 /scala-cli /usr/bin
+COPY --from=scala_cli --chmod=0x755 /mill /usr/bin
+
+# Install requirements to run verilator
+# https://verilator.org/guide/latest/install.html#install-prerequisites
+RUN apt update && apt install -y \
+    ccache \
+    g++ \
+    help2man \
+    libfl-dev \
+    libfl2 \
+    libgoogle-perftools-dev \
+    make \
+    mold \
+    numactl \
+    perl \
+    python3 \
+    zlib1g \
+    zlib1g-dev && \
+    rm -rf /var/lib/apt/lists/*
